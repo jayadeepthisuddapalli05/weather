@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Weather live</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.6/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="./index.css">
+  </head>
+  <body>
+    <div class="searchbar">
+      <div class="searchbarParentDiv">
+        <input type="text" class="inputfield" placeholder="Search City">
+        <img src="search.png" alt="" width="45px" class="searchIcon" style="cursor:pointer;">
+      </div>
+    </div>
+    <div class="mainContentParentDiv d-flex">
+      <div class="leftDiv">
+        <div class="leftChild currentTempDiv d-flex flex-column align-items-center justify-content-center gap-2">
+          <h2 id="cityName">City Name</h2>
+          <h1 id="cityTemp">0</h1>
+          <h4 id="skyDesc">Sky Description</h4>
+          <h6 id="currentDate">Date</h6>
+          <h6 id="currentTime">Time</h6> 
+        </div> 
+        <div class ="rightChild currentTempDiv d-flex flex-column align-items-center justify-content-center gap-1">
+          <h5 id="comingFiveDaysTitle" class="m-0">Coming 5 Days</h5>
+          <div class="d-flex justify-content-between flex-wrap">
+            <div class="forecastRow d-flex gap-1 p-1"></div>
+            <div class="forecastRow d-flex gap-1 p-1"></div>
+            <div class="forecastRow d-flex gap-1 p-1"></div>
+            <div class="forecastRow d-flex gap-1 p-1"></div>
+            <div class="forecastRow d-flex gap-1 p-1 "></div>
+          </div>
+        </div>
+      </div>
+      <div class="rightDiv">
+        <div class="rightrow rowOne d-flex justify-content-between align-items-center">
+          <div class="AQI rowTwoDiv  d-flex flex-column justify-content-between  ">
+            <div class="text-center">
+              <h5>AQI (AIR QUALITY INDEX)</h5>
+              <h6>0</h6>
+            </div>
+          </div>
+        </div>
+        <div class="rightrow rowTwo d-flex flex-column gap-2">
+          <div class="d-flex flex-wrap gap-3 justify-content-center mt-4">
+          <div class="extraMetric d-flex flex-column align-items-center">
+            <h5>Metric Name</h5>
+            <h6>Metric Value</h6>
+          </div>
+          <div class="extraMetric d-flex flex-column align-items-center">
+            <h5>Metric Name</h5>
+            <h6>Metric Value</h6>
+          </div>
+          <div class="extraMetric d-flex flex-column align-items-center">
+            <h5>Metric Name</h5>
+            <h6>Metric Value</h6>
+          </div>
+          <div class="extraMetric d-flex flex-column align-items-center">
+            <h5>Metric Name</h5>
+            <h6>Metric Value</h6>
+          </div>
+        </div>
+        </div>
+      </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.6/dist/js/bootstrap.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.7.1.js"></script>
+    <script>
+      async function fetchData() {
+        let cityName = document.getElementsByClassName('inputfield')[0].value.trim();
+        if (!cityName) {
+          alert("Please enter a city name.");
+          return;
+        }
+        try {
+          let requestedData = await fetch(`https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(cityName)}&appid=baa9918db74287add4461b0350a147d2&units=metric`);
+          if (!requestedData.ok) throw new Error("City not found");
+          let formattedData = await requestedData.json();
+          let responseCityName = formattedData.name;
+          let responseTemp = formattedData.main.temp;
+          let skyDescription = formattedData.weather[0].description;
+          $('#cityName').text(responseCityName);
+          $('#cityTemp').text(responseTemp);
+          $('#skyDesc').text(skyDescription);
+
+          // Set extra metrics
+          const metrics = [
+            { name: "Humidity", value: formattedData.main.humidity + " %" },
+            { name: "Pressure", value: formattedData.main.pressure + " hPa" },
+            { name: "Wind Speed", value: formattedData.wind.speed + " m/s" },
+            { name: "Feels Like", value: Math.round(formattedData.main.feels_like) + " °C" }
+          ];
+          $('.extraMetric').each(function(i) {
+            if (metrics[i]) {
+              $(this).find('h5').eq(0).text(metrics[i].name + ": " + metrics[i].value); // Show name and value together
+              $(this).find('h6').eq(0).text(metrics[i].name);
+              $(this).find('h6').eq(1).text(metrics[i].value);
+            }
+          });
+
+          // Set current date and time
+          const now = new Date();
+          const dateStr = now.toLocaleDateString();
+          const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+          $('#currentDate').text(dateStr);
+          $('#currentTime').text(timeStr);
+
+          // Fetch AQI data
+          let lat = formattedData.coord.lat;
+          let lon = formattedData.coord.lon;
+          let aqiRes = await fetch(`https://api.openweathermap.org/data/2.5/air_pollution?lat=${lat}&lon=${lon}&appid=baa9918db74287add4461b0350a147d2`);
+          if (aqiRes.ok) {
+            let aqiData = await aqiRes.json();
+            if (aqiData.list && aqiData.list.length > 0) {
+              let aqi = aqiData.list[0].main.aqi;
+              // Set AQI index value for the single AQI block
+              $('.AQI').find('h6').eq(0).text(aqi);
+              $('.AQI').find('h5').eq(0).text('AQI: ' + aqi);
+            } else {
+              $('.AQI').find('h6').eq(0).text('N/A');
+              $('.AQI').find('h5').eq(0).text('AQI: N/A');
+            }
+          } else {
+            $('.AQI').find('h6').eq(0).text('N/A');
+            $('.AQI').find('h5').eq(0).text('AQI: N/A');
+          }
+          // Fetch 5-day forecast
+          let forecastRes = await fetch(`https://api.openweathermap.org/data/2.5/forecast?lat=${lat}&lon=${lon}&appid=baa9918db74287add4461b0350a147d2&units=metric`);
+          if (forecastRes.ok) {
+            let forecastData = await forecastRes.json();
+            // Get one forecast per day (at 12:00:00)
+            let daily = [];
+            let usedDates = {};
+            for (let item of forecastData.list) {
+              let date = item.dt_txt.split(' ')[0];
+              let time = item.dt_txt.split(' ')[1];
+              if (time === "12:00:00" && !usedDates[date]) {
+                daily.push(item);
+                usedDates[date] = true;
+              }
+              if (daily.length === 5) break;
+            }
+            // Fill forecast rows
+            $('.forecastRow').each(function(i) {
+              if (daily[i]) {
+                let d = new Date(daily[i].dt_txt);
+                let day = d.toLocaleDateString(undefined, { weekday: 'long' });
+                let dateStr = d.toLocaleDateString();
+                let temp = Math.round(daily[i].main.temp);
+                $(this).html(`
+                  <div class="d-flex gap-1 align-items-center">
+                    <img src="https://openweathermap.org/img/wn/${daily[i].weather[0].icon}.png" width="32" alt="">
+                  </div>
+                  <h6 class="m-0">${day}</h6>
+                  <h6 class="m-0">${dateStr}</h6>
+                  <h6 class="m-0">${temp}&deg;C</h6>
+                `);
+              } else {
+                $(this).html('');
+              }
+            });
+          } else {
+            $('.forecastRow').html('');
+          }
+        } catch (err) {
+          alert("City not found. Please try again.");
+          $('#cityName').text("City Name");
+          $('#cityTemp').text("0");
+          $('#skyDesc').text("Sky Description");
+          $('#currentDate').text("Date");
+          $('#currentTime').text("Time");
+          $('.AQI .text-center').eq(0).find('h6').eq(1).text('0');
+          $('.forecastRow').html('');
+          $('.extraMetric').each(function() {
+            $(this).find('h6').eq(0).text('Metric Name');
+            $(this).find('h6').eq(1).text('Metric Value');
+          });
+        }
+      }
+      $('.inputfield').on('keydown', function(e) {
+        if (e.key === 'Enter') fetchData();
+      });
+      $('.searchIcon').on('click', fetchData);
+    </script>
+  </body>
+</html>
